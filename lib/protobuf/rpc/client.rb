@@ -2,6 +2,7 @@ require 'forwardable'
 require 'protobuf'
 require 'protobuf/logging'
 require 'protobuf/rpc/error'
+require 'protobuf/rpc/client/middleware'
 
 module Protobuf
   module Rpc
@@ -105,18 +106,27 @@ module Protobuf
       def method_missing(method_name, *params)
         service = options[:service]
         if service.rpc_method?(method_name)
-          logger.debug { sign_message("#{service.name}##{method_name}") }
           rpc = service.rpcs[method_name.to_sym]
 
           options[:request_type] = rpc.request_type
-          logger.debug { sign_message("Request Type: #{options[:request_type].name}") }
-
           options[:response_type] = rpc.response_type
-          logger.debug { sign_message("Response Type: #{options[:response_type].name}") }
-
           options[:method] = method_name.to_s
           options[:request] = params[0].is_a?(Hash) ? options[:request_type].new(params[0]) : params[0]
-          logger.debug { sign_message("Request Data: #{options[:request].inspect}") }
+
+          request_wrapper = ::Protobuf::Socketrpc::Request.new(
+            :service_name => options[:service].name,
+            :method_name => options[:method].to_s,
+            :request_proto => options[:request],
+            :caller => options[:client_host] || ::Protobuf.client_host
+          )
+
+          env = Env.new(
+            "service_name" => options[:service].name,
+            "method_name" => options[:method].to_s,
+            "request_type" => options[:request_type],
+            "request_wrapper" => request_wrapper,
+            "response_type" => options[:response_type],
+          )
 
           # Call client to setup on_success and on_failure event callbacks
           if block_given?
@@ -125,6 +135,9 @@ module Protobuf
           else
             logger.debug { sign_message("no block given for callbacks") }
           end
+
+          Rpc.client_middleware.call(env)
+          env.response
 
           send_request
         else
