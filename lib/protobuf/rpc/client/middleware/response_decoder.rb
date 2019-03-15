@@ -10,7 +10,7 @@ module Protobuf
           end
 
           def call(env)
-            env.response = decode_response(env.response_type, env.encoded_response)
+            env.response, env.response_is_error = decode_response(env.response_type, env.encoded_response)
             @app.call(env)
             env
           end
@@ -24,7 +24,7 @@ module Protobuf
 
               # Fail the call if we already know the client is failed. Don't
               # try to parse out the response payload
-              error(response_wrapper.error_reason, response_wrapper.error)
+              return error(response_wrapper.error_reason, response_wrapper.error), true
             else
               logger.debug { sign_message("Successful response parsed") }
 
@@ -32,9 +32,9 @@ module Protobuf
               parsed = response_type.decode(response_wrapper.response_proto.to_s)
 
               if parsed.nil?
-                error(:BAD_RESPONSE_PROTO, "Unable to parse response from server")
+                return error(:BAD_RESPONSE_PROTO, "Unable to parse response from server"), true
               else
-                parsed
+                return parsed, false
               end
             end
           end

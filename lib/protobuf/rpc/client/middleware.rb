@@ -1,6 +1,7 @@
 require 'middleware'
 require 'middleware/runner'
 
+require 'protobuf/rpc/client/middleware/callbacks'
 require 'protobuf/rpc/client/middleware/logger'
 require 'protobuf/rpc/client/middleware/request_encoder'
 require 'protobuf/rpc/client/middleware/response_decoder'
@@ -18,6 +19,7 @@ module Protobuf
   Rpc.client_middleware.use(::Protobuf::Rpc::Middleware::Client::Logger)
   Rpc.client_middleware.use(::Protobuf::Rpc::Middleware::Client::RequestEncoder)
   Rpc.client_middleware.use(::Protobuf::Rpc::Middleware::Client::ResponseDecoder)
+  Rpc.client_middleware.use(::Protobuf::Rpc::Middleware::Client::Callbacks)
 
   ActiveSupport.run_load_hooks(:protobuf_rpc_client_middleware, Rpc)
 end

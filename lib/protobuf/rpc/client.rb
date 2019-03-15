@@ -131,15 +131,12 @@ module Protobuf
           # Call client to setup on_success and on_failure event callbacks
           if block_given?
             logger.debug { sign_message("client setup callback given, invoking") }
-            yield(self)
+            yield(env)
           else
             logger.debug { sign_message("no block given for callbacks") }
           end
 
           Rpc.client_middleware.call(env)
-          env.response
-
-          send_request
         else
           logger.error { sign_message("#{service.name}##{method_name} not rpc method, passing to super") }
           super(method_name, *params)
